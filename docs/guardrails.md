@@ -89,6 +89,16 @@ For agent-level tripwires, the exception's `guardrail_result` identifies the gua
 
 Tool tripwire exceptions instead expose the triggering `guardrail` and `output` directly. Their `run_data.tool_input_guardrail_results` and `run_data.tool_output_guardrail_results` lists preserve results accumulated from completed turns before the failure; the triggering result is available through the exception's `output`. Other runner-managed failures, such as `MaxTurnsExceeded`, also preserve completed tool guardrail results in these lists. After `stream_events()` raises an exception, the streamed result exposes the same accumulated agent and tool guardrail result lists. `run_data` can be `None` when an exception is raised outside a runner-managed execution path.
 
+The guardrail function's `output_info` field is preserved on the exception as `exception.output.output_info` (tool-level) or via `guardrail_result.output.output_info` (agent-level). This is where a guardrail carries structured metadata — such as a rule identifier — through to the application. `output_info` may contain application data, so log only the safe fields you need explicitly rather than the whole object:
+
+```python
+try:
+    ...
+except ToolInputGuardrailTripwireTriggered as exc:
+    info = exc.output.output_info
+    logger.info("tool guardrail triggered", extra={"rule_id": getattr(info, "rule_id", None)})
+```
+
 ## Implementing a guardrail
 
 You need to provide a function that receives input, and returns a [`GuardrailFunctionOutput`][agents.guardrail.GuardrailFunctionOutput]. In this example, we'll do this by running an Agent under the hood.
